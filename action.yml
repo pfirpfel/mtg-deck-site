@@ -1,5 +1,5 @@
 name: MTG Deck Site
-description: Generate a static website from a repository of Magic: The Gathering deck lists
+description: "Generate a static website from a repository of Magic: The Gathering deck lists"
 branding:
   icon: layers
   color: purple
