@@ -1,0 +1,39 @@
+name: Test
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-example:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check out example deck repository
+        uses: actions/checkout@v4
+        with:
+          repository: pfirpfel/commander-decks
+          path: example-decks
+          fetch-depth: 0
+
+      - name: Build site
+        id: site
+        uses: ./
+        with:
+          decks: example-decks
+          title: commander-decks
+          repo-url: https://github.com/pfirpfel/commander-decks
+
+      - name: Check output
+        run: |
+          test -f "${{ steps.site.outputs.output }}/index.html"
+          test -f "${{ steps.site.outputs.output }}/assets/app.js"
+          find "${{ steps.site.outputs.output }}" -name '*.html' | wc -l
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: example-site
+          path: ${{ steps.site.outputs.output }}
+          include-hidden-files: true

@@ -1,0 +1,75 @@
+name: MTG Deck Site
+description: Generate a static website from a repository of Magic: The Gathering deck lists
+branding:
+  icon: layers
+  color: purple
+
+inputs:
+  decks:
+    description: Folder containing the deck lists (searched recursively for *.txt)
+    default: .
+  output:
+    description: Output folder for the generated site
+    default: _site
+  title:
+    description: Site title (defaults to the repository name)
+    default: ''
+  repo-url:
+    description: Base URL for commit links (defaults to the current GitHub repository)
+    default: ''
+  history:
+    description: Show the change history of each deck. Requires a checkout with `fetch-depth 0`.
+    default: 'true'
+  setup-node:
+    description: Install Node.js with actions/setup-node. Disable if Node.js >= 20 is already available.
+    default: 'true'
+
+outputs:
+  output:
+    description: Folder containing the generated site
+    value: ${{ steps.build.outputs.output }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Node.js
+      if: inputs.setup-node == 'true'
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22
+
+    # The Scryfall card data is reused for 24 hours. Restore the newest cache entry;
+    # the build downloads fresh data when it is older than that.
+    - name: Restore Scryfall card data
+      id: restore
+      uses: actions/cache/restore@v4
+      with:
+        path: ${{ runner.temp }}/mtg-deck-site-cache
+        key: mtg-deck-site-scryfall-${{ runner.os }}-${{ github.run_id }}
+        restore-keys: mtg-deck-site-scryfall-${{ runner.os }}-
+
+    - name: Build site
+      id: build
+      shell: bash
+      env:
+        INPUT_DECKS: ${{ inputs.decks }}
+        INPUT_OUTPUT: ${{ inputs.output }}
+        INPUT_TITLE: ${{ inputs.title }}
+        INPUT_REPO_URL: ${{ inputs.repo-url }}
+        INPUT_HISTORY: ${{ inputs.history }}
+        CACHE_DIR: ${{ runner.temp }}/mtg-deck-site-cache
+      run: |
+        args=(--decks "$INPUT_DECKS" --out "$INPUT_OUTPUT" --cache "$CACHE_DIR")
+        if [ -n "$INPUT_TITLE" ]; then args+=(--title "$INPUT_TITLE"); fi
+        if [ -n "$INPUT_REPO_URL" ]; then args+=(--repo-url "$INPUT_REPO_URL"); fi
+        if [ "$INPUT_HISTORY" != "true" ]; then args+=(--no-history); fi
+        node "$GITHUB_ACTION_PATH/src/build.mjs" "${args[@]}"
+        echo "output=$INPUT_OUTPUT" >> "$GITHUB_OUTPUT"
+        echo "cache-key=mtg-deck-site-scryfall-$RUNNER_OS-$(sha256sum "$CACHE_DIR/cards.json" | cut -c1-16)" >> "$GITHUB_OUTPUT"
+
+    - name: Save Scryfall card data
+      if: steps.build.outputs.cache-key != steps.restore.outputs.cache-matched-key
+      uses: actions/cache/save@v4
+      with:
+        path: ${{ runner.temp }}/mtg-deck-site-cache
+        key: ${{ steps.build.outputs.cache-key }}

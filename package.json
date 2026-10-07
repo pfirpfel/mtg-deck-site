@@ -1,0 +1,12 @@
+{
+  "name": "mtg-deck-site",
+  "version": "0.1.0",
+  "description": "Generate a static website from a repository of Magic: The Gathering deck lists",
+  "type": "module",
+  "bin": { "mtg-deck-site": "src/build.mjs" },
+  "scripts": {
+    "build": "node src/build.mjs",
+    "example": "node src/build.mjs --decks ../commander-decks --out _site"
+  },
+  "engines": { "node": ">=20" }
+}
