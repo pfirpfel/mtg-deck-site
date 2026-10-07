@@ -9,10 +9,10 @@ jobs:
   build-example:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Check out example deck repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: pfirpfel/commander-decks
           path: example-decks
@@ -32,7 +32,7 @@ jobs:
           test -f "${{ steps.site.outputs.output }}/assets/app.js"
           find "${{ steps.site.outputs.output }}" -name '*.html' | wc -l
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: example-site
           path: ${{ steps.site.outputs.output }}
