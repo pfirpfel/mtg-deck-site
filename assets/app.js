@@ -37,7 +37,7 @@
       list.classList.toggle('by-changed', byChanged);
       list.replaceChildren(...sorted);
     };
-    deckSort.value = store.get('deckSort') === 'changed' ? 'changed' : 'name';
+    deckSort.value = store.get('deckSort') === 'name' ? 'name' : 'changed';
     deckSort.addEventListener('change', () => { store.set('deckSort', deckSort.value); sortDecks(); });
     sortDecks();
   }

@@ -97,7 +97,7 @@ export function renderFolderPage(site, folder) {
     .join('');
   const sortable = folder.decks.length > 1 && folder.decks.some((d) => d.history.length);
   const deckSort = sortable
-    ? `<label class="deck-sort">Sort <select id="deck-sort"><option value="name">Name</option><option value="changed">Last change</option></select></label>`
+    ? `<label class="deck-sort">Sort <select id="deck-sort"><option value="changed">Last change</option><option value="name">Name</option></select></label>`
     : '';
   const content = `<div class="folder-view">
 ${folders ? `<h2>Folders</h2><ul class="entries">${folders}</ul>` : ''}
