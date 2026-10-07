@@ -85,15 +85,23 @@ export function renderFolderPage(site, folder) {
     )
     .join('');
   const decks = folder.decks
-    .map(
-      (d) =>
-        `<li><a class="entry" href="${root}${href(d.page)}"><span class="entry-name">${esc(d.name)}</span>` +
-        `<span class="entry-meta">${esc(d.commanderNames.join(' + ') || `${d.count} cards`)}</span></a></li>`,
-    )
+    .map((d) => {
+      const changed = d.history[0]?.date;
+      return (
+        `<li${changed ? ` data-changed="${esc(changed)}"` : ''}><a class="entry" href="${root}${href(d.page)}"><span class="entry-name">${esc(d.name)}</span>` +
+        `<span class="entry-meta">${esc(d.commanderNames.join(' + ') || `${d.count} cards`)}</span>` +
+        (changed ? `<time class="entry-date" datetime="${esc(changed)}">${esc(changed.slice(0, 10))}</time>` : '') +
+        `</a></li>`
+      );
+    })
     .join('');
+  const sortable = folder.decks.length > 1 && folder.decks.some((d) => d.history.length);
+  const deckSort = sortable
+    ? `<label class="deck-sort">Sort <select id="deck-sort"><option value="name">Name</option><option value="changed">Last change</option></select></label>`
+    : '';
   const content = `<div class="folder-view">
 ${folders ? `<h2>Folders</h2><ul class="entries">${folders}</ul>` : ''}
-${decks ? `<h2>Decks</h2><ul class="entries">${decks}</ul>` : ''}
+${decks ? `<div class="entries-head"><h2>Decks</h2>${deckSort}</div><ul class="entries" id="decks">${decks}</ul>` : ''}
 ${!folders && !decks ? '<p class="empty">This folder is empty.</p>' : ''}
 </div>`;
   return layout({

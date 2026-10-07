@@ -24,6 +24,24 @@
     sidebar.scrollTop += offset - sidebar.clientHeight / 2;
   }
 
+  // --- Folder view: deck order -----------------------------------------------
+  const deckSort = document.getElementById('deck-sort');
+  if (deckSort) {
+    const list = document.getElementById('decks');
+    const items = [...list.children]; // rendered in name order
+    const sortDecks = () => {
+      const byChanged = deckSort.value === 'changed';
+      const sorted = byChanged
+        ? [...items].sort((a, b) => (Date.parse(b.dataset.changed) || 0) - (Date.parse(a.dataset.changed) || 0))
+        : items;
+      list.classList.toggle('by-changed', byChanged);
+      list.replaceChildren(...sorted);
+    };
+    deckSort.value = store.get('deckSort') === 'changed' ? 'changed' : 'name';
+    deckSort.addEventListener('change', () => { store.set('deckSort', deckSort.value); sortDecks(); });
+    sortDecks();
+  }
+
   // --- Deck view ------------------------------------------------------------
   const dataEl = document.getElementById('deck-data');
   if (!dataEl) return;
