@@ -7,3 +7,6 @@
 - All mana, tap, and card type symbol images are copyright Wizards of the Coast
 
 Only the `mana.woff` font file is included; the stylesheet's other font formats are only used by legacy browsers.
+
+The site icons (`../favicon.svg`, `../favicon-32.png`, `../apple-touch-icon.png`) are made from the font's
+`ability-transform` symbol.

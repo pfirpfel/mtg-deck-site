@@ -58,6 +58,9 @@ function layout({ site, pagePath, current, title, titleIcon = '', folderPath, co
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(docTitle ?? title)}${docTitle === site.title ? '' : ' · ' + esc(site.title)}</title>
+<link rel="icon" href="${root}assets/favicon-32.png" sizes="32x32">
+<link rel="icon" href="${root}assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="${root}assets/apple-touch-icon.png">
 <link rel="stylesheet" href="${root}assets/mana/css/mana.min.css">
 <link rel="stylesheet" href="${root}assets/style.css">
 <script>try{if(localStorage.getItem('sidebar')==='hidden')document.documentElement.classList.add('sidebar-hidden')}catch(e){}</script>
