@@ -175,7 +175,7 @@ export function renderDeckPage(site, deck, repoUrl) {
 <div class="focus-inner">
 <div class="focus-card">
 <a id="focus-link" target="_blank" rel="noopener"><img id="focus-img" alt=""></a>
-<button id="flip" type="button" hidden>Flip</button>
+<button id="flip" type="button" title="Show other face" aria-label="Show other face" hidden></button>
 </div>
 </div>
 </aside>

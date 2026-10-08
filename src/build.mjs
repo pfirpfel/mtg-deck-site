@@ -98,6 +98,7 @@ async function main() {
         c: record ? cardColor(record) : 'Colorless',
         cl: record?.colors.length ? record.colors : undefined,
         mc: record?.cost,
+        lf: record?.landFace,
         img: record?.img,
         img2: record?.img2,
         uri: record?.uri,

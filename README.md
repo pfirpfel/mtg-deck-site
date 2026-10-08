@@ -3,6 +3,7 @@
 Generates a static website from a repository of Magic: The Gathering deck lists (MTGO `.txt` format).
 
 - Deck view with card images (Scryfall), mana costs, grouping by type / mana value / color, sorting by name / mana value
+- Double-faced cards can be flipped in the card preview; modal double-faced lands are listed as "+ N other" lands
 - Color identity of each deck, derived from its commanders
 - Statistics per deck: mana value, card type and color distribution
 - Change history per deck, derived from the git history of each file

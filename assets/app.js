@@ -158,16 +158,25 @@
         btn.append(i);
       }
       btn.append(label + ' ', el('span', 'count', `(${count})`));
-      btn.addEventListener('click', () => {
+      // The whole heading toggles the group, except "+ N other" next to the arrow.
+      const caret = el('span', 'caret');
+      caret.setAttribute('aria-hidden', 'true');
+      head.append(btn, caret);
+      if (groupSel.value === 'type' && k === 'Land') {
+        const other = otherLands(count);
+        if (other) head.append(other);
+      }
+      head.addEventListener('click', (e) => {
+        if (e.target.closest('.other-lands')) return;
         const collapsed = section.classList.toggle('collapsed');
         btn.setAttribute('aria-expanded', String(!collapsed));
       });
-      head.append(btn);
       const list = el('ul', 'cards');
       for (const i of idx) {
         const li = el('li');
         li.dataset.card = i;
         li.append(el('span', 'q', String(cards[i].q)), el('span', 'n', cards[i].n));
+        if (cards[i].img2) li.append(faceButton(i));
         if (cards[i].mc) li.append(manaCost(cards[i].mc));
         list.append(li);
       }
@@ -175,6 +184,76 @@
       return section;
     }));
     markActive();
+  }
+
+  /** Button after the name of a double-faced card: shows the card and switches between its faces. */
+  const FACE_ICON = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" ' +
+    'stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 0 0-14.3-4.9L4 8"/>' +
+    '<path d="M4 3v5h5"/><path d="M4 13a8 8 0 0 0 14.3 4.9L20 16"/><path d="M20 21v-5h-5"/></svg>';
+  function faceButton(i) {
+    const b = el('button', 'face-btn');
+    b.type = 'button';
+    b.title = 'Show other face';
+    b.setAttribute('aria-label', `Show other face of ${cards[i].n}`);
+    b.innerHTML = FACE_ICON;
+    b.addEventListener('click', () => {
+      if (focused !== i) setFocus(i);
+      flipFace();
+    });
+    return b;
+  }
+
+  /**
+   * "+ N other" next to the Lands heading: modal double-faced cards that can be played
+   * as a land. The list shows on hover, or on tap on touch screens.
+   */
+  let closeOtherLands = () => {};
+  document.addEventListener('click', (e) => { if (!e.target.closest('.other-lands')) closeOtherLands(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeOtherLands(); });
+
+  function otherLands(landCount) {
+    const idx = cards.flatMap((c, i) => (c.lf && c.s && c.s !== 'sideboard' ? [i] : []))
+      .sort((a, b) => sorters[sortSel.value](cards[a], cards[b]));
+    if (!idx.length) return null;
+    const count = idx.reduce((s, i) => s + cards[i].q, 0);
+    const wrap = el('span', 'other-lands');
+    const btn = el('button', 'other-btn', `+ ${count} other`);
+    btn.type = 'button';
+    btn.setAttribute('aria-expanded', 'false');
+    const pop = el('div', 'other-pop');
+    pop.id = 'other-lands-pop';
+    btn.setAttribute('aria-controls', pop.id);
+    const list = el('ul');
+    for (const i of idx) {
+      const li = el('li');
+      li.dataset.card = i;
+      li.append(el('span', 'q', String(cards[i].q)), el('span', 'n', `${cards[i].n} // ${cards[i].lf}`));
+      list.append(li);
+    }
+    const total = el('div', 'pop-total', 'Total lands: ');
+    total.append(el('strong', null, String(landCount + count)));
+    pop.append(el('div', 'pop-title', 'Other lands'), list, total);
+    wrap.append(btn, pop);
+
+    const place = () => {
+      // Above the heading like a tooltip, unless there is no room; never past the right edge.
+      pop.style.left = '0px';
+      pop.classList.remove('below');
+      if (pop.getBoundingClientRect().top < 8) pop.classList.add('below');
+      const overflow = pop.getBoundingClientRect().right - (document.documentElement.clientWidth - 8);
+      if (overflow > 0) pop.style.left = `${-overflow}px`;
+    };
+    const setOpen = (open) => {
+      wrap.classList.toggle('open', open);
+      btn.setAttribute('aria-expanded', String(open));
+      if (open) place();
+    };
+    closeOtherLands = () => setOpen(false);
+    wrap.addEventListener('mouseenter', () => { if (hover.matches) setOpen(true); });
+    wrap.addEventListener('mouseleave', () => { if (hover.matches) setOpen(false); });
+    // With a mouse, hovering already opened it; on touch screens a tap toggles it.
+    btn.addEventListener('click', () => setOpen(hover.matches || !wrap.classList.contains('open')));
+    return wrap;
   }
 
   // --- Focused card image ---------------------------------------------------
@@ -193,6 +272,9 @@
     link.dataset.name = c.n;
     if (c.uri) link.href = c.uri; else link.removeAttribute('href');
     flip.hidden = !c.img2;
+    flip.classList.toggle('flipped', back);
+    document.querySelectorAll('.face-btn.flipped').forEach((b) => b.classList.remove('flipped'));
+    if (back) document.querySelectorAll(`[data-card="${focused}"] .face-btn`).forEach((b) => b.classList.add('flipped'));
   }
   function markActive() {
     document.querySelectorAll('[data-card].active').forEach((e) => e.classList.remove('active'));
@@ -200,12 +282,44 @@
   }
   function setFocus(i) {
     if (i === focused || !cards[i]) return;
+    stopFlip(); // switching cards is instant, even in the middle of a flip
     focused = i;
     back = false;
+    if (cards[i].img2) new Image().src = cards[i].img2; // preload the back face for a smooth flip
     showImage();
     markActive();
   }
-  flip.addEventListener('click', () => { back = !back; showImage(); });
+
+  // Turn the card like in 3D: rotate it edge-on, swap the face, rotate it back into view.
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  const PERSPECTIVE = 'perspective(1000px) ';
+  let flipRun = 0;
+  function stopFlip() {
+    flipRun++;
+    img.getAnimations().forEach((a) => a.cancel());
+  }
+  async function flipFace() {
+    stopFlip();
+    back = !back;
+    const run = flipRun;
+    if (reducedMotion.matches) return showImage();
+    const out = img.animate(
+      [{ transform: PERSPECTIVE + 'rotateY(0deg)' }, { transform: PERSPECTIVE + 'rotateY(90deg)' }],
+      { duration: 150, easing: 'ease-in', fill: 'forwards' },
+    );
+    try { await out.finished; } catch { return; } // cancelled
+    if (run !== flipRun) return;
+    showImage();
+    try { await img.decode(); } catch {}
+    if (run !== flipRun) return;
+    out.cancel();
+    img.animate(
+      [{ transform: PERSPECTIVE + 'rotateY(-90deg)' }, { transform: PERSPECTIVE + 'rotateY(0deg)' }],
+      { duration: 170, easing: 'ease-out' },
+    );
+  }
+  flip.innerHTML = FACE_ICON;
+  flip.addEventListener('click', flipFace);
 
   const hover = matchMedia('(hover: hover) and (pointer: fine)');
   document.addEventListener('mouseover', (e) => {

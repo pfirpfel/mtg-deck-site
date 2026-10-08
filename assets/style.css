@@ -157,18 +157,8 @@ h1 { margin: 0; font-size: 1.6rem; font-weight: 600; line-height: 1.3; }
 .deck-main, .deck-extra { grid-column: 2; min-width: 0; }
 #focus-img { display: block; width: 100%; aspect-ratio: 488 / 680; border-radius: 4.5% / 3.3%; background: var(--hover); }
 #focus-link:not([href]) { pointer-events: none; }
-#flip {
-  position: absolute;
-  right: 0.5rem;
-  bottom: 0.5rem;
-  padding: 0.15rem 0.6rem;
-  border: 0;
-  border-radius: 999px;
-  background: rgb(0 0 0 / 0.65);
-  color: #fff;
-  font-size: 13px;
-  cursor: pointer;
-}
+/* Face switch for double-faced cards: in the card rows on desktop, on the image on phones. */
+#flip { display: none; }
 
 .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.25rem; margin-bottom: 1rem; font-size: 14px; }
 .toolbar .total { margin-right: auto; color: var(--muted); }
@@ -177,19 +167,53 @@ h1 { margin: 0; font-size: 1.6rem; font-weight: 600; line-height: 1.3; }
 
 .groups { columns: 230px; column-gap: 2rem; }
 .group { break-inside: avoid; margin-bottom: 1.5rem; }
-.group h3 { margin: 0 0 0.25rem; font-size: 15px; }
+.group h3 { display: flex; align-items: baseline; gap: 0.5rem; margin: 0 0 0.25rem; font-size: 15px; }
+
+/* "+ N other" lands: modal double-faced cards with a land back face */
+.other-lands { position: relative; }
+.group h3 .other-btn { padding: 0; border: 0; background: none; color: var(--muted); font-weight: 400; cursor: pointer; }
+.other-btn:hover, .other-lands.open .other-btn { color: var(--text); }
+.other-pop {
+  display: none;
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 6px);
+  z-index: 10;
+  width: max-content;
+  max-width: min(440px, calc(100vw - 16px));
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background: #111214;
+  color: #f2f2f2;
+  font-size: 14px;
+  font-weight: 400;
+  border: 1px solid transparent;
+  box-shadow: 0 6px 24px rgb(0 0 0 / 0.3);
+}
+@media (prefers-color-scheme: dark) {
+  .other-pop { background: #0b0c0d; border-color: #3a3e45; }
+}
+/* Invisible bridge over the gap, so the mouse can move into the list without closing it. */
+.other-pop::after { content: ""; position: absolute; left: 0; right: 0; top: 100%; height: 8px; }
+.other-pop.below { bottom: auto; top: calc(100% + 6px); }
+.other-pop.below::after { top: auto; bottom: 100%; }
+.other-lands.open .other-pop { display: block; }
+.other-pop ul { list-style: none; margin: 0.35rem 0 0.6rem; padding: 0; }
+.other-pop li { display: flex; gap: 0.5rem; padding: 0.1rem 0.25rem; margin: 0 -0.25rem; border-radius: 4px; cursor: default; }
+.other-pop li.active { background: rgb(255 255 255 / 0.12); }
+.other-pop .q { min-width: 1em; text-align: right; color: #a9adb5; }
+.pop-title { font-weight: 600; }
 .group h3 button { padding: 0.2rem 0; border: 0; background: none; font-weight: 600; cursor: pointer; }
-.group h3 button::after {
-  content: "";
-  display: inline-block;
-  margin-left: 0.4rem;
+.group h3 { cursor: pointer; }
+.group h3 .caret {
+  align-self: center;
+  margin-left: -0.15rem;
   border: 4px solid transparent;
   border-top-color: currentColor;
   border-bottom: 0;
-  vertical-align: middle;
   transition: transform 0.15s;
 }
-.group.collapsed h3 button::after { transform: rotate(-90deg); }
+.group.collapsed h3 .caret { transform: rotate(-90deg); }
 .group.collapsed .cards { display: none; }
 .count { font-weight: 400; color: var(--muted); }
 .cards { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
@@ -197,6 +221,22 @@ h1 { margin: 0; font-size: 1.6rem; font-weight: 600; line-height: 1.3; }
 .cards li:hover, [data-card].active { background: var(--hover); }
 .cards .q { flex: none; min-width: 1.1em; text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
 .cards .n { min-width: 0; }
+.face-btn {
+  flex: none;
+  align-self: center;
+  display: inline-flex;
+  padding: 0.15rem;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--muted);
+  line-height: 0;
+  cursor: pointer;
+}
+.face-btn:hover { color: var(--text); background: var(--line); }
+.face-btn svg { transition: transform 0.25s; }
+.face-btn.flipped { color: var(--accent); }
+.face-btn.flipped svg { transform: rotate(180deg); }
 
 /* Mana symbols ------------------------------------------------------------ */
 .cost { flex: none; display: flex; align-items: center; gap: 0.12em; margin-left: auto; padding-left: 0.4rem; font-size: 13.5px; }
@@ -300,6 +340,22 @@ h1 .identity { font-size: 0.75em; }
   .focus-inner { top: 0.5rem; }
   .deck-extra { grid-column: 1 / -1; }
   .pie-chart { width: 120px !important; }
+  .cards .face-btn { display: none; }
+  #flip:not([hidden]) {
+    display: flex;
+    position: absolute;
+    right: 0.35rem;
+    bottom: 0.35rem;
+    padding: 0.35rem;
+    border: 0;
+    border-radius: 999px;
+    background: rgb(0 0 0 / 0.65);
+    color: #fff;
+    line-height: 0;
+    cursor: pointer;
+  }
+  #flip svg { transition: transform 0.25s; }
+  #flip.flipped svg { transform: rotate(180deg); }
   .groups { columns: auto; }
   .cards li { padding: 0.4rem 0.2rem; font-size: 14px; }
   .focus .toolbar { flex-direction: column; align-items: stretch; gap: 0.5rem; margin: 0.75rem 0 0; font-size: 13px; }

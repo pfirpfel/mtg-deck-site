@@ -10,7 +10,7 @@ const BULK_ENDPOINT = 'https://api.scryfall.com/bulk-data';
 const HEADERS = { 'User-Agent': 'mtg-deck-site/0.1', Accept: 'application/json' };
 const MAX_AGE_MS = 24 * 60 * 60 * 1000;
 // Bump when the cached card record format changes, so older caches are rebuilt.
-const CACHE_VERSION = 2;
+const CACHE_VERSION = 3;
 const SKIPPED_LAYOUTS = new Set(['token', 'double_faced_token', 'emblem', 'art_series', 'vanguard', 'scheme']);
 
 /** Normalize a card name for lookups: case, diacritics, quotes and split card notation. */
@@ -140,12 +140,21 @@ function slimCard(card) {
     identity: card.color_identity ?? [],
     // Double-faced cards only have a cost on their faces; split cards list both halves.
     cost: (faces.length && !card.mana_cost ? front.mana_cost : card.mana_cost) || undefined,
+    // Modal double-faced cards that can be played as a land with their back face ("Boggart Trawler // Boggart Bog").
+    landFace: landFace(card, faces),
     companion: card.keywords?.includes('Companion') || undefined,
     img: card.image_uris?.crop ?? faces[0]?.image_uris?.crop,
     img2: card.image_uris ? undefined : faces[1]?.image_uris?.crop,
     uri: card.scryfall_uri?.split('?')[0],
     faces: faces.length ? faces.map((f) => f.name) : undefined,
   };
+}
+
+const isLand = (typeLine) => /\bLand\b/.test(typeLine ?? '');
+
+function landFace(card, faces) {
+  if (card.layout !== 'modal_dfc' || isLand(faces[0]?.type_line)) return undefined;
+  return faces.slice(1).find((f) => isLand(f.type_line))?.name;
 }
 
 function buildIndex({ records, aliases }) {
