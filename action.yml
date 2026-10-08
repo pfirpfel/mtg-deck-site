@@ -12,10 +12,10 @@ inputs:
     description: Output folder for the generated site
     default: _site
   title:
-    description: Site title shown in the browser tab (defaults to root-name)
+    description: Site title, shown in the browser tab and as the home page heading (defaults to root-name)
     default: ''
   root-name:
-    description: Name of the root folder, shown as the home page heading and first breadcrumb (defaults to the repository name)
+    description: Name of the root folder, shown as the first breadcrumb item (defaults to the repository name)
     default: ''
   repo-url:
     description: Base URL for commit links (defaults to the current GitHub repository)

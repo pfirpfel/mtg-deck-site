@@ -102,7 +102,7 @@ ${!folders && !decks ? '<p class="empty">This folder is empty.</p>' : ''}
   return layout({
     site,
     pagePath,
-    title: folder.path ? folder.name : site.rootName,
+    title: folder.path ? folder.name : site.title,
     // The home page's tab shows the site title only.
     docTitle: folder.path ? folder.name : '',
     folderPath: folder.path,

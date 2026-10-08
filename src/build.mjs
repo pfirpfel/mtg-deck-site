@@ -149,7 +149,7 @@ async function main() {
     .filter(lastChange)
     .sort((a, b) => lastChange(b) - lastChange(a))
     .slice(0, 10);
-  // The root folder's name (home page heading, first breadcrumb) and the site title (browser tab).
+  // The site title (browser tab, home page heading) and the root folder's name (first breadcrumb).
   const rootName = opts['root-name'] ?? opts.title ?? path.basename(repoRoot ?? deckRoot);
   const site = { title: opts.title ?? rootName, rootName, recent };
 

@@ -62,8 +62,8 @@ Enable Pages in the repository settings with "GitHub Actions" as the source.
 | --- | --- | --- |
 | `decks` | `.` | Folder containing the deck lists (searched recursively for `*.txt`) |
 | `output` | `_site` | Output folder for the generated site |
-| `title` | `root-name` | Site title, shown in the browser tab |
-| `root-name` | repository name | Name of the root folder: home page heading and first breadcrumb |
+| `title` | `root-name` | Site title, shown in the browser tab and as the home page heading |
+| `root-name` | repository name | Name of the root folder, shown as the first breadcrumb item |
 | `repo-url` | current repository | Base URL for commit links |
 | `history` | `true` | Show the change history of each deck |
 | `setup-node` | `true` | Install Node.js 22 via `actions/setup-node` |
@@ -86,8 +86,8 @@ node src/build.mjs --decks ../commander-decks --out _site
 | `--decks` | `.` | Folder containing the deck lists (searched recursively for `*.txt`) |
 | `--out` | `_site` | Output folder (deleted and recreated) |
 | `--cache` | `.cache/scryfall` | Scryfall card data cache, reused for 24 hours |
-| `--title` | `--root-name` | Site title, shown in the browser tab |
-| `--root-name` | repo folder name | Name of the root folder: home page heading and first breadcrumb |
+| `--title` | `--root-name` | Site title, shown in the browser tab and as the home page heading |
+| `--root-name` | repo folder name | Name of the root folder, shown as the first breadcrumb item |
 | `--repo-url` | from `GITHUB_REPOSITORY` or `origin` | Base URL for commit links |
 | `--no-history` | | Skip the git history |
 
