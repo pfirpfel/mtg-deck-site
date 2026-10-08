@@ -7,7 +7,7 @@ Generates a static website from a repository of Magic: The Gathering deck lists 
 - Color identity of each deck, derived from its commanders
 - Statistics per deck: mana value, card type and color distribution
 - Change history per deck, derived from the git history of each file
-- Collapsible folder tree, breadcrumb and folder pages, sortable by name or last change
+- Breadcrumb and folder pages, sortable by name or last change
 - Home page with the most recently updated decks
 
 ## GitHub Action
@@ -62,7 +62,8 @@ Enable Pages in the repository settings with "GitHub Actions" as the source.
 | --- | --- | --- |
 | `decks` | `.` | Folder containing the deck lists (searched recursively for `*.txt`) |
 | `output` | `_site` | Output folder for the generated site |
-| `title` | repository name | Site title |
+| `title` | `root-name` | Site title, shown in the browser tab |
+| `root-name` | repository name | Name of the root folder: home page heading and first breadcrumb |
 | `repo-url` | current repository | Base URL for commit links |
 | `history` | `true` | Show the change history of each deck |
 | `setup-node` | `true` | Install Node.js 22 via `actions/setup-node` |
@@ -85,7 +86,8 @@ node src/build.mjs --decks ../commander-decks --out _site
 | `--decks` | `.` | Folder containing the deck lists (searched recursively for `*.txt`) |
 | `--out` | `_site` | Output folder (deleted and recreated) |
 | `--cache` | `.cache/scryfall` | Scryfall card data cache, reused for 24 hours |
-| `--title` | repo folder name | Site title |
+| `--title` | `--root-name` | Site title, shown in the browser tab |
+| `--root-name` | repo folder name | Name of the root folder: home page heading and first breadcrumb |
 | `--repo-url` | from `GITHUB_REPOSITORY` or `origin` | Base URL for commit links |
 | `--no-history` | | Skip the git history |
 

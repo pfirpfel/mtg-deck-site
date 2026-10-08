@@ -1,28 +1,8 @@
 (() => {
-  const html = document.documentElement;
-  const mobile = matchMedia('(max-width: 900px)');
   const store = {
     get: (k) => { try { return localStorage.getItem(k); } catch { return null; } },
     set: (k, v) => { try { localStorage.setItem(k, v); } catch {} },
   };
-
-  // --- Sidebar --------------------------------------------------------------
-  document.querySelector('.menu-toggle')?.addEventListener('click', () => {
-    if (mobile.matches) {
-      html.classList.toggle('sidebar-open');
-    } else {
-      const hidden = html.classList.toggle('sidebar-hidden');
-      store.set('sidebar', hidden ? 'hidden' : 'shown');
-    }
-  });
-  document.querySelector('[data-close-sidebar]')?.addEventListener('click', () => html.classList.remove('sidebar-open'));
-  // Center the current entry in the tree without scrolling the page itself.
-  const sidebar = document.getElementById('sidebar');
-  const current = sidebar?.querySelector('[aria-current="page"]');
-  if (current) {
-    const offset = current.getBoundingClientRect().top - sidebar.getBoundingClientRect().top;
-    sidebar.scrollTop += offset - sidebar.clientHeight / 2;
-  }
 
   // --- Folder view: deck order -----------------------------------------------
   const deckSort = document.getElementById('deck-sort');

@@ -1,6 +1,6 @@
 {
   "name": "mtg-deck-site",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Generate a static website from a repository of Magic: The Gathering deck lists",
   "type": "module",
   "bin": { "mtg-deck-site": "src/build.mjs" },

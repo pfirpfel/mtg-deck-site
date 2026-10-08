@@ -16,6 +16,7 @@ const { values: opts } = parseArgs({
     out: { type: 'string', default: '_site' },
     cache: { type: 'string', default: '.cache/scryfall' },
     title: { type: 'string' },
+    'root-name': { type: 'string' },
     'repo-url': { type: 'string' },
     'no-history': { type: 'boolean', default: false },
   },
@@ -148,7 +149,9 @@ async function main() {
     .filter(lastChange)
     .sort((a, b) => lastChange(b) - lastChange(a))
     .slice(0, 10);
-  const site = { title: opts.title ?? path.basename(repoRoot ?? deckRoot), tree: tree.root, recent };
+  // The root folder's name (home page heading, first breadcrumb) and the site title (browser tab).
+  const rootName = opts['root-name'] ?? opts.title ?? path.basename(repoRoot ?? deckRoot);
+  const site = { title: opts.title ?? rootName, rootName, recent };
 
   await rm(outDir, { recursive: true, force: true });
   await mkdir(outDir, { recursive: true });

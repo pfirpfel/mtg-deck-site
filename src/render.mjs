@@ -22,27 +22,9 @@ function identityIcon(identity) {
 
 export const folderPage = (folderPath) => (folderPath ? folderPath + '/index.html' : 'index.html');
 
-function renderTree(folder, ctx, depth = 0) {
-  const items = [];
-  for (const sub of folder.folders) {
-    const open = ctx.current === sub.path || ctx.current.startsWith(sub.path + '/');
-    const current = ctx.current === sub.path ? ' aria-current="page"' : '';
-    items.push(
-      `<li><details${open ? ' open' : ''}><summary><a href="${ctx.root}${href(folderPage(sub.path))}"${current}>${esc(sub.name)}</a></summary>` +
-        renderTree(sub, ctx, depth + 1) +
-        `</details></li>`,
-    );
-  }
-  for (const deck of folder.decks) {
-    const current = ctx.current === deck.file ? ' aria-current="page"' : '';
-    items.push(`<li><a class="deck-link" href="${ctx.root}${href(deck.page)}"${current}>${esc(deck.name)}</a></li>`);
-  }
-  return `<ul${depth === 0 ? ' class="tree"' : ''}>${items.join('')}</ul>`;
-}
-
 function renderCrumbs(folderPath, site, root) {
   const parts = folderPath ? folderPath.split('/') : [];
-  const links = [`<a href="${root}index.html">${esc(site.title)}</a>`];
+  const links = [`<a href="${root}index.html">${esc(site.rootName)}</a>`];
   parts.forEach((name, i) => {
     const p = parts.slice(0, i + 1).join('/');
     links.push(`<a href="${root}${href(folderPage(p))}">${esc(name)}</a>`);
@@ -50,41 +32,28 @@ function renderCrumbs(folderPath, site, root) {
   return `<nav class="crumbs" aria-label="Breadcrumb">${links.join('<span class="sep">/</span>')}</nav>`;
 }
 
-function layout({ site, pagePath, current, title, titleIcon = '', folderPath, content, docTitle }) {
+function layout({ site, pagePath, title, titleIcon = '', folderPath, content, docTitle = title }) {
   const root = rootPrefix(pagePath);
   return `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${esc(docTitle ?? title)}${docTitle === site.title ? '' : ' · ' + esc(site.title)}</title>
+<title>${docTitle ? esc(docTitle) + ' · ' : ''}${esc(site.title)}</title>
 <link rel="icon" href="${root}assets/favicon-32.png" sizes="32x32">
 <link rel="icon" href="${root}assets/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="${root}assets/apple-touch-icon.png">
 <link rel="stylesheet" href="${root}assets/mana/css/mana.min.css">
 <link rel="stylesheet" href="${root}assets/style.css">
-<script>try{if(localStorage.getItem('sidebar')==='hidden')document.documentElement.classList.add('sidebar-hidden')}catch(e){}</script>
 </head>
 <body>
-<div class="layout">
-<nav class="sidebar" id="sidebar" aria-label="Decks">
-<a class="site-title" href="${root}index.html">${esc(site.title)}</a>
-${renderTree(site.tree, { root, current })}
-</nav>
-<div class="backdrop" data-close-sidebar></div>
 <main>
 <header class="page-head">
-<button class="menu-toggle" type="button" aria-controls="sidebar" aria-label="Toggle deck tree">
-<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-</button>
-<div>
 <h1>${titleIcon}${esc(title)}</h1>
 ${renderCrumbs(folderPath, site, root)}
-</div>
 </header>
 ${content}
 </main>
-</div>
 <script src="${root}assets/app.js" defer></script>
 </body>
 </html>
@@ -133,9 +102,9 @@ ${!folders && !decks ? '<p class="empty">This folder is empty.</p>' : ''}
   return layout({
     site,
     pagePath,
-    current: folder.path,
-    title: folder.path ? folder.name : site.title,
-    docTitle: folder.path ? folder.name : site.title,
+    title: folder.path ? folder.name : site.rootName,
+    // The home page's tab shows the site title only.
+    docTitle: folder.path ? folder.name : '',
     folderPath: folder.path,
     content,
   });
@@ -205,7 +174,6 @@ ${history}
   return layout({
     site,
     pagePath,
-    current: deck.file,
     title: deck.name,
     titleIcon: identityIcon(deck.identity),
     folderPath: deck.folder,

@@ -12,7 +12,10 @@ inputs:
     description: Output folder for the generated site
     default: _site
   title:
-    description: Site title (defaults to the repository name)
+    description: Site title shown in the browser tab (defaults to root-name)
+    default: ''
+  root-name:
+    description: Name of the root folder, shown as the home page heading and first breadcrumb (defaults to the repository name)
     default: ''
   repo-url:
     description: Base URL for commit links (defaults to the current GitHub repository)
@@ -56,12 +59,14 @@ runs:
         INPUT_DECKS: ${{ inputs.decks }}
         INPUT_OUTPUT: ${{ inputs.output }}
         INPUT_TITLE: ${{ inputs.title }}
+        INPUT_ROOT_NAME: ${{ inputs.root-name }}
         INPUT_REPO_URL: ${{ inputs.repo-url }}
         INPUT_HISTORY: ${{ inputs.history }}
         CACHE_DIR: ${{ runner.temp }}/mtg-deck-site-cache
       run: |
         args=(--decks "$INPUT_DECKS" --out "$INPUT_OUTPUT" --cache "$CACHE_DIR")
         if [ -n "$INPUT_TITLE" ]; then args+=(--title "$INPUT_TITLE"); fi
+        if [ -n "$INPUT_ROOT_NAME" ]; then args+=(--root-name "$INPUT_ROOT_NAME"); fi
         if [ -n "$INPUT_REPO_URL" ]; then args+=(--repo-url "$INPUT_REPO_URL"); fi
         if [ "$INPUT_HISTORY" != "true" ]; then args+=(--no-history); fi
         node "$GITHUB_ACTION_PATH/src/build.mjs" "${args[@]}"
