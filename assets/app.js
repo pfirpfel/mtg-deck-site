@@ -55,11 +55,19 @@
   const SPECIAL = { commander: 'Commander', companion: 'Companion', sideboard: 'Sideboard' };
 
   const special = (c) => SPECIAL[c.s];
+  // Mana font classes for the group headings.
+  const typeIcon = (k) => (k === 'Commander' ? 'ms-commander' : PLURAL[k] ? 'ms-' + k.toLowerCase() : null);
+  const COLOR_ICONS = { White: 'ms-w', Blue: 'ms-u', Black: 'ms-b', Red: 'ms-r', Green: 'ms-g', Colorless: 'ms-c' };
+  const colorIcon = (k) =>
+    COLOR_ICONS[k] ? COLOR_ICONS[k] + ' ms-cost ms-shadow'
+      : k === 'Multicolor' ? 'ms-multicolor ms-duo ms-duo-color ms-grad'
+        : typeIcon(k);
   const groupings = {
     type: {
       key: (c) => special(c) ?? c.t,
       order: (k) => TYPE_ORDER.indexOf(k),
       label: (k) => PLURAL[k] ?? k,
+      icon: typeIcon,
     },
     mv: {
       key: (c) => special(c) ?? (c.t === 'Land' || c.t === 'Unknown' ? c.t : 'MV ' + c.mv),
@@ -70,6 +78,7 @@
       key: (c) => special(c) ?? (c.t === 'Unknown' ? c.t : c.c),
       order: (k) => ({ Commander: -2, Companion: -1, Unknown: 999, Sideboard: 1000 })[k] ?? COLOR_ORDER.indexOf(k),
       label: (k) => (k === 'Land' ? 'Lands' : k),
+      icon: colorIcon,
     },
     none: {
       key: (c) => special(c) ?? 'Deck',
@@ -86,6 +95,16 @@
   const img = document.getElementById('focus-img');
   const link = document.getElementById('focus-link');
   const flip = document.getElementById('flip');
+
+  // On phones the toolbar sits below the card image, so the deck list starts with its first card.
+  const toolbar = document.getElementById('toolbar');
+  const phone = matchMedia('(max-width: 600px)');
+  const placeToolbar = () => {
+    if (phone.matches) document.querySelector('.focus-inner').append(toolbar);
+    else document.querySelector('.deck-main').prepend(toolbar);
+  };
+  phone.addEventListener('change', placeToolbar);
+  placeToolbar();
   groupSel.value = store.get('group') in groupings ? store.get('group') : 'type';
   sortSel.value = store.get('sort') in sorters ? store.get('sort') : 'name';
 
@@ -95,6 +114,22 @@
     if (text != null) e.textContent = text;
     return e;
   };
+
+  /** Mana cost like "{2}{W/U}{G/P}" as Mana font symbols; split cards show both halves. */
+  const SYMBOLS = { T: 'tap', Q: 'untap', '∞': 'infinity', '½': 'half' };
+  function manaCost(cost) {
+    const span = el('span', 'cost');
+    span.title = cost;
+    span.setAttribute('aria-label', 'Mana cost ' + cost);
+    cost.split(' // ').forEach((part, i) => {
+      if (i) span.append(el('span', 'cost-sep', '//'));
+      for (const [, sym] of part.matchAll(/\{([^}]+)\}/g)) {
+        const name = SYMBOLS[sym] ?? sym.replace(/\//g, '').toLowerCase();
+        span.append(el('i', `ms ms-${name} ms-cost ms-shadow`));
+      }
+    });
+    return span;
+  }
 
   function render() {
     const g = groupings[groupSel.value];
@@ -113,10 +148,16 @@
       if ((k === 'Commander') && idx.length > 1) label = 'Commanders';
       const section = el('section', 'group');
       const head = el('h3');
-      const btn = el('button', null, label + ' ');
+      const btn = el('button');
       btn.type = 'button';
       btn.setAttribute('aria-expanded', 'true');
-      btn.append(el('span', 'count', `(${count})`));
+      const icon = g.icon?.(k);
+      if (icon) {
+        const i = el('i', `ms ${icon} ms-fw group-icon`);
+        i.setAttribute('aria-hidden', 'true');
+        btn.append(i);
+      }
+      btn.append(label + ' ', el('span', 'count', `(${count})`));
       btn.addEventListener('click', () => {
         const collapsed = section.classList.toggle('collapsed');
         btn.setAttribute('aria-expanded', String(!collapsed));
@@ -127,6 +168,7 @@
         const li = el('li');
         li.dataset.card = i;
         li.append(el('span', 'q', String(cards[i].q)), el('span', 'n', cards[i].n));
+        if (cards[i].mc) li.append(manaCost(cards[i].mc));
         list.append(li);
       }
       section.append(head, list);
@@ -182,4 +224,152 @@
   render();
   const first = cards.findIndex((c) => c.s === 'commander');
   setFocus(first >= 0 ? first : Number(groupsEl.querySelector('[data-card]')?.dataset.card ?? 0));
+
+  // --- Statistics -----------------------------------------------------------
+  const statsBody = document.querySelector('#stats .stats-body');
+  if (statsBody) renderStats(statsBody, cards.filter((c) => c.s === 'main' || c.s === 'commander'));
 })();
+
+function renderStats(container, deck) {
+  const SVG = 'http://www.w3.org/2000/svg';
+  const svgEl = (tag, attrs = {}, text) => {
+    const e = document.createElementNS(SVG, tag);
+    for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+    if (text != null) e.textContent = text;
+    return e;
+  };
+  const htmlEl = (tag, cls, text) => {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  };
+  const plural = (n) => `${n} card${n === 1 ? '' : 's'}`;
+  const nonland = deck.filter((c) => c.t !== 'Land' && c.t !== 'Unknown');
+
+  // Mana value distribution: nonland cards, 0 … 7+.
+  const buckets = Array.from({ length: 8 }, (_, i) => ({ label: i === 7 ? '7+' : String(i), n: 0 }));
+  let mvSum = 0;
+  let mvCount = 0;
+  for (const c of nonland) {
+    buckets[Math.min(7, Math.floor(c.mv))].n += c.q;
+    mvSum += c.mv * c.q;
+    mvCount += c.q;
+  }
+  const avg = mvCount ? (mvSum / mvCount).toFixed(2) : '–';
+  container.append(figure('Mana value', `Nonland cards · average ${avg}`, barChart(buckets)));
+
+  // Card types: every card counted with its quantity, under its main type.
+  const TYPES = ['Creature', 'Planeswalker', 'Battle', 'Artifact', 'Enchantment', 'Instant', 'Sorcery', 'Land'];
+  const PLURAL = { Creature: 'Creatures', Planeswalker: 'Planeswalkers', Battle: 'Battles', Artifact: 'Artifacts',
+    Enchantment: 'Enchantments', Instant: 'Instants', Sorcery: 'Sorceries', Land: 'Lands' };
+  const typeCounts = new Map();
+  for (const c of deck) {
+    const t = TYPES.includes(c.t) ? c.t : 'Other';
+    typeCounts.set(t, (typeCounts.get(t) ?? 0) + c.q);
+  }
+  const typeSlices = [...TYPES, 'Other']
+    .filter((t) => typeCounts.get(t))
+    .map((t) => ({ label: PLURAL[t] ?? t, n: typeCounts.get(t), color: `var(--type-${t.toLowerCase()})` }));
+  container.append(figure('Card types', 'All cards', pieChart(typeSlices, 'cards')));
+
+  // Colors: each copy of a nonland card counts once for every one of its colors.
+  const COLORS = { W: 'White', U: 'Blue', B: 'Black', R: 'Red', G: 'Green', C: 'Colorless' };
+  const colorCounts = new Map();
+  for (const c of nonland) {
+    for (const col of c.cl ?? ['C']) colorCounts.set(col, (colorCounts.get(col) ?? 0) + c.q);
+  }
+  const colorSlices = Object.keys(COLORS)
+    .filter((k) => colorCounts.get(k))
+    .map((k) => ({ label: COLORS[k], n: colorCounts.get(k), color: `var(--mtg-${k.toLowerCase()})` }));
+  container.append(figure('Colors', 'Nonland cards · multicolored cards count for each color',
+    pieChart(colorSlices, 'colors')));
+
+  function figure(title, note, body) {
+    const fig = htmlEl('figure', 'chart');
+    const cap = htmlEl('figcaption');
+    cap.append(htmlEl('span', 'chart-title', title), htmlEl('span', 'chart-note', note));
+    fig.append(cap, body);
+    return fig;
+  }
+
+  function barChart(data) {
+    const W = 320, H = 170, left = 26, right = 6, top = 16, bottom = 22;
+    const max = Math.max(1, ...data.map((d) => d.n));
+    const step = max <= 5 ? 1 : max <= 10 ? 2 : max <= 25 ? 5 : 10;
+    const yMax = Math.ceil(max / step) * step;
+    const plotH = H - top - bottom;
+    const slot = (W - left - right) / data.length;
+    const barW = Math.min(26, slot * 0.62);
+    const y = (v) => top + plotH - (v / yMax) * plotH;
+    const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, class: 'bar-chart', role: 'img',
+      'aria-label': 'Mana value distribution: ' + data.map((d) => `${d.label}: ${d.n}`).join(', ') });
+    for (let v = 0; v <= yMax; v += step) {
+      svg.append(svgEl('line', { x1: left, x2: W - right, y1: y(v), y2: y(v), class: v ? 'grid' : 'baseline' }));
+      svg.append(svgEl('text', { x: left - 6, y: y(v) + 3.5, class: 'tick', 'text-anchor': 'end' }, v));
+    }
+    data.forEach((d, i) => {
+      const cx = left + slot * i + slot / 2;
+      const g = svgEl('g', { class: 'bar' });
+      g.append(svgEl('title', {}, `Mana value ${d.label}: ${plural(d.n)}`));
+      // Generous hit target behind the visible bar.
+      g.append(svgEl('rect', { x: cx - slot / 2, y: top, width: slot, height: plotH, class: 'hit' }));
+      if (d.n) {
+        const h = (d.n / yMax) * plotH;
+        const r = Math.min(4, h, barW / 2);
+        const x0 = cx - barW / 2, x1 = cx + barW / 2, yb = y(0), yt = yb - h;
+        g.append(svgEl('path', { class: 'mark',
+          d: `M${x0},${yb}V${yt + r}Q${x0},${yt} ${x0 + r},${yt}H${x1 - r}Q${x1},${yt} ${x1},${yt + r}V${yb}Z` }));
+        g.append(svgEl('text', { x: cx, y: yt - 4, class: 'value', 'text-anchor': 'middle' }, d.n));
+      }
+      g.append(svgEl('text', { x: cx, y: H - 6, class: 'tick', 'text-anchor': 'middle' }, d.label));
+      svg.append(g);
+    });
+    return svg;
+  }
+
+  function pieChart(slices, unit) {
+    const wrap = htmlEl('div', 'pie');
+    const total = slices.reduce((s, d) => s + d.n, 0);
+    const size = 160, c = size / 2, R = 72, r0 = 44;
+    const svg = svgEl('svg', { viewBox: `0 0 ${size} ${size}`, class: 'pie-chart', role: 'img',
+      'aria-label': slices.map((d) => `${d.label}: ${d.n}`).join(', ') });
+    const legend = htmlEl('ul', 'legend');
+    const pt = (rad, a) => [c + rad * Math.sin(a), c - rad * Math.cos(a)];
+    let a0 = 0;
+    for (const d of slices) {
+      const pct = Math.round((d.n / total) * 100);
+      const g = svgEl('g', { class: 'slice' });
+      g.append(svgEl('title', {}, `${d.label}: ${d.n} (${pct}%)`));
+      if (slices.length === 1) {
+        g.append(svgEl('circle', { cx: c, cy: c, r: (R + r0) / 2, fill: 'none', stroke: d.color,
+          'stroke-width': R - r0, class: 'mark ring' }));
+      } else {
+        const a1 = a0 + (d.n / total) * Math.PI * 2;
+        const large = a1 - a0 > Math.PI ? 1 : 0;
+        const [x0, y0] = pt(R, a0), [x1, y1] = pt(R, a1), [x2, y2] = pt(r0, a1), [x3, y3] = pt(r0, a0);
+        g.append(svgEl('path', { fill: d.color, class: 'mark',
+          d: `M${x0},${y0}A${R},${R} 0 ${large} 1 ${x1},${y1}L${x2},${y2}A${r0},${r0} 0 ${large} 0 ${x3},${y3}Z` }));
+        a0 = a1;
+      }
+      svg.append(g);
+      const li = htmlEl('li');
+      const sw = htmlEl('span', 'swatch');
+      sw.style.background = d.color;
+      li.append(sw, htmlEl('span', 'legend-label', d.label), htmlEl('span', 'legend-value', String(d.n)),
+        htmlEl('span', 'legend-pct', `${pct}%`));
+      legend.append(li);
+      // Hovering a slice or its legend row highlights both.
+      const on = () => { wrap.classList.add('hovering'); g.classList.add('hot'); li.classList.add('hot'); };
+      const off = () => { wrap.classList.remove('hovering'); g.classList.remove('hot'); li.classList.remove('hot'); };
+      for (const e of [g, li]) {
+        e.addEventListener('mouseenter', on);
+        e.addEventListener('mouseleave', off);
+      }
+    }
+    svg.append(svgEl('text', { x: c, y: c + 2, class: 'pie-total', 'text-anchor': 'middle' }, total));
+    svg.append(svgEl('text', { x: c, y: c + 16, class: 'pie-unit', 'text-anchor': 'middle' }, unit));
+    wrap.append(svg, legend);
+    return wrap;
+  }
+}

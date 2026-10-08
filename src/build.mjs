@@ -96,6 +96,8 @@ async function main() {
         t: type,
         mv: record?.mv ?? 0,
         c: record ? cardColor(record) : 'Colorless',
+        cl: record?.colors.length ? record.colors : undefined,
+        mc: record?.cost,
         img: record?.img,
         img2: record?.img2,
         uri: record?.uri,
@@ -127,6 +129,10 @@ async function main() {
       page: file.replace(/\.txt$/i, '.html'),
       name: deckDisplayName(file),
       commanderNames: cards.filter((c) => c.s === 'commander').map((c) => c.n),
+      // Color identity as defined by the commanders; null for decks without commanders.
+      identity: parsed.commanders.length
+        ? 'WUBRG'.split('').filter((col) => commanderRecords.some((r) => r?.identity.includes(col)))
+        : null,
       count: cards.reduce((sum, c) => sum + (c.s && c.s !== 'sideboard' ? c.q : 0), 0),
       cards,
       history,
@@ -136,7 +142,12 @@ async function main() {
 
   const nonEmpty = decks.filter((d) => d.count > 0);
   const tree = buildTree(nonEmpty);
-  const site = { title: opts.title ?? path.basename(repoRoot ?? deckRoot), tree: tree.root };
+  const lastChange = (deck) => Date.parse(deck.history[0]?.date) || 0;
+  const recent = nonEmpty
+    .filter(lastChange)
+    .sort((a, b) => lastChange(b) - lastChange(a))
+    .slice(0, 10);
+  const site = { title: opts.title ?? path.basename(repoRoot ?? deckRoot), tree: tree.root, recent };
 
   await rm(outDir, { recursive: true, force: true });
   await mkdir(outDir, { recursive: true });

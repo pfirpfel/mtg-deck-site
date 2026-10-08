@@ -7,6 +7,19 @@ const href = (p) => p.split('/').map(encodeURIComponent).join('/');
 /** Relative prefix from a page at `pagePath` back to the site root. */
 const rootPrefix = (pagePath) => '../'.repeat(pagePath.split('/').length - 1);
 
+const COLOR_NAMES = { W: 'White', U: 'Blue', B: 'Black', R: 'Red', G: 'Green' };
+
+/** Card color indicator for a deck's color identity (WUBRG order), or '' without commanders. */
+function identityIcon(identity) {
+  if (!identity) return '';
+  if (!identity.length) {
+    return '<i class="ms ms-c ms-cost ms-shadow identity" title="Colorless" aria-label="Colorless"></i> ';
+  }
+  const label = identity.map((c) => COLOR_NAMES[c]).join(', ');
+  const cls = `ms ms-ci ms-ci-${identity.length} ms-ci-${identity.join('').toLowerCase()} identity`;
+  return `<i class="${cls}" title="${label}" aria-label="${label}"></i> `;
+}
+
 export const folderPage = (folderPath) => (folderPath ? folderPath + '/index.html' : 'index.html');
 
 function renderTree(folder, ctx, depth = 0) {
@@ -37,7 +50,7 @@ function renderCrumbs(folderPath, site, root) {
   return `<nav class="crumbs" aria-label="Breadcrumb">${links.join('<span class="sep">/</span>')}</nav>`;
 }
 
-function layout({ site, pagePath, current, title, folderPath, content, docTitle }) {
+function layout({ site, pagePath, current, title, titleIcon = '', folderPath, content, docTitle }) {
   const root = rootPrefix(pagePath);
   return `<!doctype html>
 <html lang="en">
@@ -45,6 +58,7 @@ function layout({ site, pagePath, current, title, folderPath, content, docTitle 
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(docTitle ?? title)}${docTitle === site.title ? '' : ' · ' + esc(site.title)}</title>
+<link rel="stylesheet" href="${root}assets/mana/css/mana.min.css">
 <link rel="stylesheet" href="${root}assets/style.css">
 <script>try{if(localStorage.getItem('sidebar')==='hidden')document.documentElement.classList.add('sidebar-hidden')}catch(e){}</script>
 </head>
@@ -61,7 +75,7 @@ ${renderTree(site.tree, { root, current })}
 <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
 </button>
 <div>
-<h1>${esc(title)}</h1>
+<h1>${titleIcon}${esc(title)}</h1>
 ${renderCrumbs(folderPath, site, root)}
 </div>
 </header>
@@ -74,6 +88,19 @@ ${content}
 `;
 }
 
+function deckEntry(deck, root, withFolder = false) {
+  const changed = deck.history[0]?.date;
+  const meta = deck.commanderNames.join(' + ') || `${deck.count} cards`;
+  return (
+    `<li${changed ? ` data-changed="${esc(changed)}"` : ''}><a class="entry" href="${root}${href(deck.page)}">` +
+    `<span class="entry-name">${identityIcon(deck.identity)}${esc(deck.name)}` +
+    (withFolder && deck.folder ? `<span class="entry-folder">${esc(deck.folder)}/</span>` : '') +
+    `</span><span class="entry-meta">${esc(meta)}</span>` +
+    (changed ? `<time class="entry-date" datetime="${esc(changed)}">${esc(changed.slice(0, 10))}</time>` : '') +
+    `</a></li>`
+  );
+}
+
 export function renderFolderPage(site, folder) {
   const pagePath = folderPage(folder.path);
   const root = rootPrefix(pagePath);
@@ -84,22 +111,18 @@ export function renderFolderPage(site, folder) {
         `<span class="entry-meta">${f.deckCount} deck${f.deckCount === 1 ? '' : 's'}</span></a></li>`,
     )
     .join('');
-  const decks = folder.decks
-    .map((d) => {
-      const changed = d.history[0]?.date;
-      return (
-        `<li${changed ? ` data-changed="${esc(changed)}"` : ''}><a class="entry" href="${root}${href(d.page)}"><span class="entry-name">${esc(d.name)}</span>` +
-        `<span class="entry-meta">${esc(d.commanderNames.join(' + ') || `${d.count} cards`)}</span>` +
-        (changed ? `<time class="entry-date" datetime="${esc(changed)}">${esc(changed.slice(0, 10))}</time>` : '') +
-        `</a></li>`
-      );
-    })
-    .join('');
+  const decks = folder.decks.map((d) => deckEntry(d, root)).join('');
+  // The home page leads with the most recently changed decks of the whole site.
+  const recent =
+    !folder.path && site.recent.length
+      ? `<h2>Recently updated</h2><ul class="entries recent">${site.recent.map((d) => deckEntry(d, root, true)).join('')}</ul>`
+      : '';
   const sortable = folder.decks.length > 1 && folder.decks.some((d) => d.history.length);
   const deckSort = sortable
     ? `<label class="deck-sort">Sort <select id="deck-sort"><option value="changed">Last change</option><option value="name">Name</option></select></label>`
     : '';
   const content = `<div class="folder-view">
+${recent}
 ${folders ? `<h2>Folders</h2><ul class="entries">${folders}</ul>` : ''}
 ${decks ? `<div class="entries-head"><h2>Decks</h2>${deckSort}</div><ul class="entries" id="decks">${decks}</ul>` : ''}
 ${!folders && !decks ? '<p class="empty">This folder is empty.</p>' : ''}
@@ -136,7 +159,7 @@ function renderHistory(history, cardIndex, repoUrl) {
       return `<li class="change"><div class="change-head"><time datetime="${esc(h.date)}">${esc(h.date.slice(0, 10))}</time> ${commit} <code>${h.hash.slice(0, 7)}</code></div>${body}</li>`;
     })
     .join('');
-  return `<section class="history"><h2>Changes</h2><ol>${entries}</ol></section>`;
+  return `<details class="panel history"><summary><h2>Changes <span class="count">(${history.length})</span></h2></summary><ol>${entries}</ol></details>`;
 }
 
 export function renderDeckPage(site, deck, repoUrl) {
@@ -147,12 +170,14 @@ export function renderDeckPage(site, deck, repoUrl) {
   const content = `<div class="deck">
 <aside class="focus">
 <div class="focus-inner">
+<div class="focus-card">
 <a id="focus-link" target="_blank" rel="noopener"><img id="focus-img" alt=""></a>
 <button id="flip" type="button" hidden>Flip</button>
 </div>
+</div>
 </aside>
 <section class="deck-main">
-<div class="toolbar">
+<div class="toolbar" id="toolbar">
 <span class="total">${deck.count} cards</span>
 <label>Group <select id="group">
 <option value="type">Type</option>
@@ -167,9 +192,20 @@ export function renderDeckPage(site, deck, repoUrl) {
 </div>
 <div id="groups" class="groups"></div>
 <noscript><p>Enable JavaScript to view the deck list.</p></noscript>
-${history}
 </section>
+<div class="deck-extra">
+<details class="panel stats" id="stats"><summary><h2>Statistics</h2></summary><div class="stats-body"></div></details>
+${history}
+</div>
 </div>
 <script type="application/json" id="deck-data">${data}</script>`;
-  return layout({ site, pagePath, current: deck.file, title: deck.name, folderPath: deck.folder, content });
+  return layout({
+    site,
+    pagePath,
+    current: deck.file,
+    title: deck.name,
+    titleIcon: identityIcon(deck.identity),
+    folderPath: deck.folder,
+    content,
+  });
 }

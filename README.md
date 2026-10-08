@@ -2,9 +2,12 @@
 
 Generates a static website from a repository of Magic: The Gathering deck lists (MTGO `.txt` format).
 
-- Deck view with card images (Scryfall), grouping by type / mana value / color, sorting by name / mana value
-- Collapsible folder tree, breadcrumb and folder pages
+- Deck view with card images (Scryfall), mana costs, grouping by type / mana value / color, sorting by name / mana value
+- Color identity of each deck, derived from its commanders
+- Statistics per deck: mana value, card type and color distribution
 - Change history per deck, derived from the git history of each file
+- Collapsible folder tree, breadcrumb and folder pages, sortable by name or last change
+- Home page with the most recently updated decks
 
 ## GitHub Action
 
@@ -101,3 +104,9 @@ Main deck and sideboard are separated by an empty line. A sideboard of 3 or fewe
 
 Cards are matched by name, including split cards written as `Fire/Ice`, single faces of double-faced cards,
 names truncated by MTGO and alternative names such as the *Through the Omenpaths* versions of Marvel cards.
+
+## Credits
+
+- Card data and images from [Scryfall](https://scryfall.com/)
+- Mana and card type symbols from [Mana](https://mana.andrewgioia.com/) by Andrew Gioia (font: SIL OFL 1.1, CSS: MIT),
+  see [assets/mana](assets/mana/README.md)

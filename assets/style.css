@@ -8,6 +8,24 @@
   --accent: #2f5fd0;
   --add: #1f7a3a;
   --rem: #b3261e;
+  /* Chart colors: card types use the categorical palette in a fixed order per type. */
+  --series-1: #2a78d6;
+  --type-creature: #2a78d6;
+  --type-planeswalker: #eb6834;
+  --type-battle: #1baf7a;
+  --type-artifact: #eda100;
+  --type-enchantment: #e87ba4;
+  --type-instant: #008300;
+  --type-sorcery: #4a3aa7;
+  --type-land: #e34948;
+  --type-other: #a3a29c;
+  /* The five Magic colors and colorless. */
+  --mtg-w: #e3c75b;
+  --mtg-u: #2a78d6;
+  --mtg-b: #4b4453;
+  --mtg-r: #e34948;
+  --mtg-g: #1f8a3d;
+  --mtg-c: #a3a29c;
   --sidebar-w: 260px;
   color-scheme: light dark;
 }
@@ -22,6 +40,22 @@
     --accent: #8ab0ff;
     --add: #6fcf8a;
     --rem: #ff8a80;
+    --series-1: #3987e5;
+    --type-creature: #3987e5;
+    --type-planeswalker: #d95926;
+    --type-battle: #199e70;
+    --type-artifact: #c98500;
+    --type-enchantment: #d55181;
+    --type-instant: #008300;
+    --type-sorcery: #9085e9;
+    --type-land: #e66767;
+    --type-other: #6f6e69;
+    --mtg-w: #e8d48a;
+    --mtg-u: #3987e5;
+    --mtg-b: #8a8096;
+    --mtg-r: #e66767;
+    --mtg-g: #3fae5c;
+    --mtg-c: #7d7c77;
   }
 }
 
@@ -108,13 +142,19 @@ h1 { margin: 0; font-size: 1.6rem; font-weight: 600; line-height: 1.3; }
 .entry-name { flex: none; max-width: 60%; }
 .entry-name + .entry-meta { margin-left: auto; }
 .entry-date { display: none; flex: none; color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
-.by-changed .entry-date { display: block; }
+.by-changed .entry-date, .recent .entry-date { display: block; }
+.entry-folder { margin-left: 0.5rem; color: var(--muted); font-size: 13px; }
+.entries.recent { columns: auto; max-width: 900px; }
 .entry-meta { min-width: 0; color: var(--muted); font-size: 13px; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Deck view --------------------------------------------------------------- */
-.deck { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 2rem; align-items: start; }
-.focus { position: sticky; top: 1rem; }
-.focus-inner { position: relative; }
+/* The image column spans the deck list and the panels below it, so the image
+   stays in view while hovering cards in the change history. */
+.deck { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 0 2rem; }
+.focus { grid-row: 1 / span 2; }
+.focus-inner { position: sticky; top: 1rem; }
+.focus-card { position: relative; }
+.deck-main, .deck-extra { grid-column: 2; min-width: 0; }
 #focus-img { display: block; width: 100%; aspect-ratio: 488 / 680; border-radius: 4.5% / 3.3%; background: var(--hover); }
 #focus-link:not([href]) { pointer-events: none; }
 #flip {
@@ -156,10 +196,69 @@ h1 { margin: 0; font-size: 1.6rem; font-weight: 600; line-height: 1.3; }
 .cards li { display: flex; gap: 0.6rem; padding: 0.25rem 0.3rem; border-bottom: 1px solid var(--line); cursor: default; }
 .cards li:hover, [data-card].active { background: var(--hover); }
 .cards .q { flex: none; min-width: 1.1em; text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
+.cards .n { min-width: 0; }
+
+/* Mana symbols ------------------------------------------------------------ */
+.cost { flex: none; display: flex; align-items: center; gap: 0.12em; margin-left: auto; padding-left: 0.4rem; font-size: 13.5px; }
+.cost .ms-cost { margin: 0; }
+.cost-sep { margin: 0 0.15em; color: var(--muted); font-size: 11px; }
+.group-icon { margin-right: 0.45rem; font-size: 0.95em; color: var(--muted); }
+.group-icon.ms-cost { font-size: 0.75em; color: #111; }
+.identity { margin-right: 0.45rem; font-size: 0.8em; vertical-align: 0.08em; }
+h1 .identity { font-size: 0.75em; }
+.entry-name .identity { font-size: 12px; margin-right: 0.4rem; vertical-align: -0.05em; }
+
+/* Collapsible panels -------------------------------------------------------- */
+.panel { margin-top: 1.5rem; border-top: 1px solid var(--line); }
+.panel + .panel { margin-top: 0; }
+.panel > summary { display: flex; align-items: center; padding: 0.75rem 0; cursor: pointer; list-style: none; }
+.panel > summary::-webkit-details-marker { display: none; }
+.panel > summary::before {
+  content: "";
+  width: 0.45rem;
+  height: 0.45rem;
+  margin: 0 0.6rem 0 0.15rem;
+  border-right: 1.5px solid var(--muted);
+  border-bottom: 1.5px solid var(--muted);
+  transform: rotate(-45deg);
+  transition: transform 0.15s;
+}
+.panel[open] > summary::before { transform: rotate(45deg); }
+.panel > summary:hover h2 { color: var(--accent); }
+.panel h2 { font-size: 1.1rem; font-weight: 600; margin: 0; }
+.panel[open] { padding-bottom: 1rem; }
+
+/* Statistics -------------------------------------------------------------- */
+.stats-body { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.5rem 2.5rem; }
+.chart { margin: 0; min-width: 0; }
+.chart figcaption { display: flex; flex-direction: column; margin-bottom: 0.5rem; }
+.chart-title { font-weight: 600; font-size: 14px; }
+.chart-note { font-size: 12px; color: var(--muted); }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; font-family: inherit; }
+.bar-chart { max-width: 420px; }
+.bar-chart .grid { stroke: var(--line); stroke-width: 1; }
+.bar-chart .baseline { stroke: var(--muted); stroke-width: 1; }
+.bar-chart .tick { font-size: 10px; fill: var(--muted); font-variant-numeric: tabular-nums; }
+.bar-chart .value { font-size: 10px; fill: var(--text); font-variant-numeric: tabular-nums; }
+.bar-chart .hit { fill: transparent; }
+.bar-chart .mark { fill: var(--series-1); }
+.bar-chart .bar:hover .hit { fill: var(--hover); }
+.pie { display: flex; align-items: center; gap: 1.25rem; }
+.pie-chart { flex: none; width: 140px !important; }
+.pie-chart .mark { stroke: var(--bg); stroke-width: 2; stroke-linejoin: round; transition: opacity 0.15s; }
+.pie-chart .mark.ring { stroke-width: 28; }
+.pie.hovering .slice:not(.hot) .mark { opacity: 0.35; }
+.pie-total { font-size: 20px; font-weight: 600; fill: var(--text); font-variant-numeric: tabular-nums; }
+.pie-unit { font-size: 10px; fill: var(--muted); }
+.legend { list-style: none; margin: 0; padding: 0; font-size: 13px; min-width: 0; flex: 1; }
+.legend li { display: flex; align-items: center; gap: 0.45rem; padding: 0.1rem 0.3rem; border-radius: 4px; cursor: default; }
+.legend li.hot { background: var(--hover); }
+.swatch { flex: none; width: 0.7rem; height: 0.7rem; border-radius: 3px; }
+.legend-label { flex: 1; }
+.legend-value { font-variant-numeric: tabular-nums; }
+.legend-pct { min-width: 2.6em; text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
 
 /* History ----------------------------------------------------------------- */
-.history { margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid var(--line); }
-.history h2 { font-size: 1.1rem; font-weight: 600; margin: 0 0 1rem; }
 .history ol { list-style: none; margin: 0; padding: 0; }
 .change { margin-bottom: 1.25rem; }
 .change-head { font-size: 14px; }
@@ -194,10 +293,16 @@ h1 { margin: 0; font-size: 1.6rem; font-weight: 600; line-height: 1.3; }
 }
 @media (max-width: 600px) {
   h1 { font-size: 1.3rem; }
-  .deck { grid-template-columns: 38vw minmax(0, 1fr); gap: 0.9rem; }
-  .focus { top: 0.5rem; }
+  .deck { grid-template-columns: 30vw minmax(0, 1fr); gap: 0 0.75rem; }
+  .cost { font-size: 11px; gap: 0.08em; padding-left: 0.3rem; }
+  .cards li { gap: 0.4rem; }
+  .focus { grid-row: 1; }
+  .focus-inner { top: 0.5rem; }
+  .deck-extra { grid-column: 1 / -1; }
+  .pie-chart { width: 120px !important; }
   .groups { columns: auto; }
   .cards li { padding: 0.4rem 0.2rem; font-size: 14px; }
-  .toolbar { font-size: 13px; gap: 0.4rem 0.75rem; }
-  .toolbar .total { width: 100%; }
+  .focus .toolbar { flex-direction: column; align-items: stretch; gap: 0.5rem; margin: 0.75rem 0 0; font-size: 13px; }
+  .focus .toolbar label { flex-direction: column; align-items: stretch; gap: 0.15rem; }
+  .focus .toolbar select { width: 100%; }
 }

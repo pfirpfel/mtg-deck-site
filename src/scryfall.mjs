@@ -9,6 +9,8 @@ import readline from 'node:readline';
 const BULK_ENDPOINT = 'https://api.scryfall.com/bulk-data';
 const HEADERS = { 'User-Agent': 'mtg-deck-site/0.1', Accept: 'application/json' };
 const MAX_AGE_MS = 24 * 60 * 60 * 1000;
+// Bump when the cached card record format changes, so older caches are rebuilt.
+const CACHE_VERSION = 2;
 const SKIPPED_LAYOUTS = new Set(['token', 'double_faced_token', 'emblem', 'art_series', 'vanguard', 'scheme']);
 
 /** Normalize a card name for lookups: case, diacritics, quotes and split card notation. */
@@ -54,8 +56,11 @@ export async function loadCardIndex(cacheDir, { log = console.log } = {}) {
   await mkdir(cacheDir, { recursive: true });
   const dataFile = path.join(cacheDir, 'cards.json');
   if (await isFresh(dataFile)) {
-    log(`Using cached card data (${dataFile})`);
-    return buildIndex(JSON.parse(await readFile(dataFile, 'utf8')));
+    const cached = JSON.parse(await readFile(dataFile, 'utf8'));
+    if (cached.version === CACHE_VERSION) {
+      log(`Using cached card data (${dataFile})`);
+      return buildIndex(cached);
+    }
   }
 
   const records = [];
@@ -74,7 +79,7 @@ export async function loadCardIndex(cacheDir, { log = console.log } = {}) {
       }
     }
   }
-  const data = { records, aliases: [...aliases] };
+  const data = { version: CACHE_VERSION, records, aliases: [...aliases] };
   await writeFile(dataFile, JSON.stringify(data));
   // Only the derived data is needed for later builds; keep the cache small.
   await Promise.all([oracleFile, defaultFile].map((f) => rm(f, { force: true })));
@@ -132,6 +137,9 @@ function slimCard(card) {
     type: (front.type_line ?? card.type_line ?? '').split(' // ')[0],
     mv: card.cmc ?? 0,
     colors: card.colors ?? front.colors ?? [],
+    identity: card.color_identity ?? [],
+    // Double-faced cards only have a cost on their faces; split cards list both halves.
+    cost: (faces.length && !card.mana_cost ? front.mana_cost : card.mana_cost) || undefined,
     companion: card.keywords?.includes('Companion') || undefined,
     img: card.image_uris?.crop ?? faces[0]?.image_uris?.crop,
     img2: card.image_uris ? undefined : faces[1]?.image_uris?.crop,
